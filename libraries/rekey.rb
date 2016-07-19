@@ -60,7 +60,7 @@ class Chef
 
       def assert_destination_writable!
         if (File.exist?(destination) && !File.writable?(destination)) || !File.writable?(File.dirname(destination))
-          raise Chef::Exceptions::CannotWritePrivateKey, "I cannot write your private key to #{destination} - check permissions?"
+          fail Chef::Exceptions::CannotWritePrivateKey, "I cannot write your private key to #{destination} - check permissions?"
         end
       end
 
@@ -78,11 +78,11 @@ class Chef
                    else
                      http_api.put_rest("clients/#{name}", put_data)
                    end
-        @server_generated_private_key = if response.respond_to?(:private_key) # Chef 11
-                                          response.private_key
-                                        else # Chef 10
-                                          response['private_key']
-                                        end
+        if response.respond_to?(:private_key) # Chef 11
+          @server_generated_private_key = response.private_key
+        else # Chef 10
+          @server_generated_private_key = response['private_key']
+        end
         response
       end
 
@@ -97,7 +97,17 @@ class Chef
       end
 
       def http_api
-        @http_api ||= Chef::REST.new(Chef::Config[:chef_server_url])
+        if Gem::Version.new(Chef::VERSION) < Gem::Version.new("12.7.0")
+          @http_api ||= Chef::REST::RestRequest.new(Chef::Config[:chef_server_url])
+        else
+          @http_api ||= Chef::ServerAPI.new(Chef::Config[:chef_server_url],
+            {
+              :api_version => "0",
+              :client_name => Chef::Config[:client_name],
+              :signing_key_filename => Chef::Config[:client_key],
+            }
+          )
+        end
       end
 
       # Whether or not to generate keys locally and post the public key to the

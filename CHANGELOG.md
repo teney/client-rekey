@@ -25,6 +25,7 @@ Initial release of client-rekey
 
 * Enhancements
   * an enhancement
+  * Change from Chef::REST to Chef::ServerAPI since Chef::REST has been deprecated
 
 * Bug Fixes
   * a bug fix
